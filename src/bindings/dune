@@ -1,0 +1,40 @@
+; Generate C stubs executable
+
+(rule
+ (target stub_gen.c)
+ (deps stub_gen/stub_gen.exe)
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{deps}))))
+
+; Compile C stubs executable with uring.h and liburing
+
+(rule
+ (target uring.h)
+ (action
+  (copy# %{project_root}/bpf/uring.h uring.h)))
+
+(rule
+ (target stub_gen.o)
+ (deps uring.h stub_gen.c)
+ (action
+  (bash
+   "%{cc} %{deps} -I `dirname %{lib:ctypes:ctypes_cstubs_internals.h}` -I %{ocaml_where} -luring -o %{target}")))
+
+; Run stub_gen.o
+
+(rule
+ (target uring_generated.ml)
+ (deps stub_gen.o)
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{deps} -ml))))
+
+(library
+ (name bindings)
+ (modules
+  uring_generated ; generated
+  bindings)
+ (libraries stubs stub_types))

@@ -1,0 +1,4 @@
+(library
+ (name fxt)
+ (libraries eio)
+ (modules write))

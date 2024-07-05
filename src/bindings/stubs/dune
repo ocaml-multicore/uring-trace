@@ -1,0 +1,12 @@
+(library
+ (name stub_types)
+ (preprocess
+  (pps ppx_deriving.show))
+ (modules stub_types))
+
+(library
+ (name stubs)
+ (preprocess
+  (pps ppx_deriving.show))
+ (libraries ctypes.stubs stub_types)
+ (modules stubs))
