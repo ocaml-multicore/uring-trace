@@ -1,7 +1,5 @@
 (lang dune 3.13)
 
-(generate_opam_files true)
-
 (name uring-trace)
 (source
  (github koonwen/uring-trace))
