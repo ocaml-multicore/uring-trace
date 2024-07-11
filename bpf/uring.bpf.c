@@ -150,11 +150,15 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
   return 0;
 }
 
+#if (LINUX_KERNEL_VERSION >= KERNEL_VERSION(6, 3, 0))
 SEC("tp/io_uring/io_uring_submit_req")
-int handle_submit_req(void *_ctx) {
+int handle_submit_req(struct trace_event_raw_io_uring_submit_req *ctx) {
+#else
+SEC("tp/io_uring/io_uring_submit_sqe")
+int handle_submit_req(struct trace_event_raw_io_uring_submit_sqe *ctx) {
+#endif
   struct event *e;
   struct io_uring_submit_sqe *extra;
-  struct trace_event_raw_io_uring_submit_req* ctx = _ctx;
 
   unsigned op_str_off;
 
@@ -500,8 +504,8 @@ int handle_complete(struct trace_event_raw_io_uring_complete *ctx) {
 }
 
 SEC("kprobe/io_init_new_worker")
-int BPF_KPROBE(handle_io_init_new_worker, struct io_wq *wq, struct io_worker *worker,
-			       struct task_struct *tsk) {
+int BPF_KPROBE(handle_io_init_new_worker, struct io_wq *wq,
+               struct io_worker *worker, struct task_struct *tsk) {
   struct event *e;
   struct io_init_new_worker *extra;
 

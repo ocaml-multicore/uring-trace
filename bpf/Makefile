@@ -4,12 +4,20 @@ CLANG ?= clang
 LLVM_STRIP ?= llvm-strip
 BPFTOOL ?= /usr/sbin/bpftool
 CFLAGS := -g -Wall -fPIC
-ARCH := $(shell uname -m | sed 's/x86_64/x86/')
+ARCH := $(shell uname -m)
+ARCH_SHORTHAND ?= $(shell uname -m | sed 's/x86_64/x86/' \
+				| sed 's/arm.*/arm/' \
+				| sed 's/aarch64/arm64/' \
+				| sed 's/ppc64le/powerpc/' \
+				| sed 's/mips.*/mips/' \
+				| sed 's/riscv64/riscv/' \
+				| sed 's/loongarch64/loongarch/')
+LINUX_KERNEL_VERSION := $(shell uname -r | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 VMLINUX := ./vmlinux.h
-INCLUDES := -I$(OUTPUT) -I/usr/include/x86_64-linux-gnu/ -I$(dir $(VMLINUX))
+INCLUDES := -I$(OUTPUT) -I/usr/include/$(ARCH)-linux-gnu/
 
-PROBES = uring
 BINS = size
+PROBES = uring
 
 ifeq ($(V),1)
 	Q =
@@ -44,8 +52,10 @@ $(OUTPUT)/%.skel.h: $(OUTPUT)/%.bpf.o | $(OUTPUT)
 # Build BPF code
 $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(VMLINUX) | $(OUTPUT)
 	$(call msg,BPF,$@)
-	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH)		      \
+	$(Q)$(CLANG) -g -O2 -target bpf \
+		-D__TARGET_ARCH_$(ARCH_SHORTHAND) \
 		     $(INCLUDES) -c $(filter %.c,$^) -o $@
+		# -DLINUX_KERNEL_VERSION=$(LINUX_KERNEL_VERSION) \
 	# $(Q)$(LLVM_STRIP) -g $@
 
 $(VMLINUX):
