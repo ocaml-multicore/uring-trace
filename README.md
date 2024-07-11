@@ -128,6 +128,25 @@ rings of interest.
   - [X] Show number of io-workers
   - [X] Connected with flows
 
+# Usage
+To trace a program, you will first need to run the `uring\_trace`
+binary in a separate process. The `uring\_trace` will detect when a
+new uring instance is spawned and record events from there.
+
+```bash
+git clone git@github.com:koonwen/uring-trace.git
+cd uring-trace/src
+make run
+
+# In a separate terminal
+<execute your program>
+```
+
+Once you've finished tracing/would like to stop tracing, hit `Ctrl-C`
+and you should find a `trace.fxt` file in the same directory as
+uring-trace/src which you can load into perfetto to explore what
+io-uring was doing under the hood.
+
 # Undesirable Behaviours
 This tool reads events through a shared ring buffer with the kernel. As such
 there is a possibility that events are overwritten before they are read and processed
