@@ -150,7 +150,8 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
   return 0;
 }
 
-#if (LINUX_KERNEL_VERSION >= KERNEL_VERSION(6, 3, 0))
+/* This is a hacky way to load the right tracepoints */
+#if (MAJOR_VERSION >= 6 && MINOR_VERSION >= 3)
 SEC("tp/io_uring/io_uring_submit_req")
 int handle_submit_req(struct trace_event_raw_io_uring_submit_req *ctx) {
 #else

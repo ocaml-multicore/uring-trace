@@ -12,7 +12,9 @@ ARCH_SHORTHAND ?= $(shell uname -m | sed 's/x86_64/x86/' \
 				| sed 's/mips.*/mips/' \
 				| sed 's/riscv64/riscv/' \
 				| sed 's/loongarch64/loongarch/')
-LINUX_KERNEL_VERSION := $(shell uname -r | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+# Kernel version
+MAJOR_VERSION := $(shell uname -r | sed -E 's/^([0-9]+).*/\1/')
+MINOR_VERSION := $(shell uname -r | sed -E 's/^[0-9]+\.([0-9]+)\..*/\1/')
 VMLINUX := ./vmlinux.h
 INCLUDES := -I$(OUTPUT) -I/usr/include/$(ARCH)-linux-gnu/
 
@@ -54,12 +56,13 @@ $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(VMLINUX) | $(OUTPUT)
 	$(call msg,BPF,$@)
 	$(Q)$(CLANG) -g -O2 -target bpf \
 		-D__TARGET_ARCH_$(ARCH_SHORTHAND) \
+		-DMAJOR_VERSION=$(MAJOR_VERSION)  \
+		-DMINOR_VERSION=$(MINOR_VERSION)  \
 		     $(INCLUDES) -c $(filter %.c,$^) -o $@
-		# -DLINUX_KERNEL_VERSION=$(LINUX_KERNEL_VERSION) \
 	# $(Q)$(LLVM_STRIP) -g $@
 
 $(VMLINUX):
-	sudo bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
+	/sbin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
 
 # delete failed targets
 .DELETE_ON_ERROR:
