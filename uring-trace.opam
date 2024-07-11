@@ -9,7 +9,7 @@ bug-reports: "https://github.com/koonwen/uring-trace/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.13"}
-  "eio_linux"
+  "eio_main"
   "libbpf"
   "libbpf_maps"
   "conf-liburing"

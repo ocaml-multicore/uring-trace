@@ -22,5 +22,4 @@
     (chdir
      %{project_root}/bpf
      (run make))
-    (copy %{project_root}/bpf/output/uring.bpf.o uring.bpf.o)
-))))
+    (copy %{project_root}/bpf/output/uring.bpf.o uring.bpf.o)))))
