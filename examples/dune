@@ -1,0 +1,3 @@
+(executables
+ (names cp fs_gen)
+ (libraries eio eio_main))
