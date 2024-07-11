@@ -284,7 +284,7 @@ let () =
         "handle_create";
         "handle_register";
         "handle_file_get";
-        "handle_submit_sqe";
+        "handle_submit_req";
         "handle_queue_async_work";
         "handle_poll_arm";
         "handle_task_add";

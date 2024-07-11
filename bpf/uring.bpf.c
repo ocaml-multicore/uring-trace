@@ -150,16 +150,11 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
   return 0;
 }
 
-SEC("tp/io_uring/io_uring_submit_sqe")
+SEC("tp/io_uring/io_uring_submit_req")
 int handle_submit_req(void *_ctx) {
   struct event *e;
   struct io_uring_submit_sqe *extra;
-#if (LINUX_KERNEL_VERSION >= KERNEL_VERSION(6, 3, 0))
   struct trace_event_raw_io_uring_submit_req* ctx = _ctx;
-#else
-  struct trace_event_raw_io_uring_submit_sqe* ctx = _ctx;
-  extra->force_nonblock = ctx->force_nonblock;
-#endif
 
   unsigned op_str_off;
 
