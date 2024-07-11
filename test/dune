@@ -1,0 +1,11 @@
+(executable
+ (name test_load)
+ (libraries libbpf))
+
+(rule
+ (mode
+  (promote (until-clean)))
+ (targets uring.bpf.o)
+ (deps %{project_root}/src/uring.bpf.o)
+ (action
+  (copy %{project_root}/src/uring.bpf.o uring.bpf.o)))
