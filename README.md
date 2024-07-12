@@ -135,6 +135,9 @@ new uring instance is spawned and record events from there.
 
 ```bash
 git clone git@github.com:koonwen/uring-trace.git
+cd uring-trace
+opam switch create . --deps-only -y
+opam switch pin conf-liburing.opam . -y
 cd uring-trace/src
 make run
 
