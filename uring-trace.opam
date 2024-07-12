@@ -16,6 +16,9 @@ depends: [
   "conf-bpftool"
   "ctypes"
   "odoc" {with-doc}
+  "eio" {>= "1.1"}
+  "eio_linux" {>= "1.1"}
+  "ppx_deriving" {>= "6.0.2"}
 ]
 build: [
   ["dune" "subst"] {dev}
