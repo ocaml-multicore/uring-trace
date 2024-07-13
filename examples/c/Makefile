@@ -1,17 +1,14 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g -O2
-OBJS = traversal_strat cp_strat
+CFLAGS = -Wall -Werror -g
+OBJS = traversal_strat.o cp_strat.o cp.o
 BINS = cp
 
 all: cp.exe
 
-cp_strat.o: cp_strat.c
-	$(CC) $(CFLAGS) $< -c $@
+%.o : %.c
+	$(CC) $(CFLAGS) -c $^
 
-traversal_strat.o: traversal_strat.c
-	$(CC) $(CFLAGS) $< -c $@
-
-cp.exe: cp.c traversal_strat.o cp_strat.o
+cp.exe: $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
 text.file:
@@ -33,8 +30,8 @@ seq_rw: cp.exe small_dir
 	rm -rf small_dir.copy
 	./$< rw seq small_dir small_dir.copy
 
-# validate: cp.exe
-# 	# Probably write this as a loop
+validate: cp.exe cp.c text.file
+	for cp_strat in rw sp sf cf; do	./$< $$cp_strat cp.c && ./$< $$cp_strat text.file && diff cp.c cp.c.copy && diff text.file text.file.copy; done
 
 bench: cp.exe 1gb.file 4kb.file
 	sudo -v
@@ -43,30 +40,5 @@ bench: cp.exe 1gb.file 4kb.file
 		  --parameter-list strategy rw,sp,sf,cf \
 		  './$< {strategy} 1gb.file'
 
-rw: cp.exe text.file
-	./$< rw cp.c
-	./$< rw text.file
-	diff cp.c cp.c.copy
-	diff text.file text.file.copy
-
-sp: cp.exe text.file
-	./$< sp cp.c
-	./$< sp text.file
-	diff cp.c cp.c.copy
-	diff text.file text.file.copy
-
-sf: cp.exe text.file
-	./$< sf cp.c
-	./$< sf text.file
-	diff cp.c cp.c.copy
-	diff text.file text.file.copy
-
-cf: cp.exe text.file
-	./$< cf cp.c
-	./$< cf text.file
-	diff cp.c cp.c.copy
-	diff text.file text.file.copy
-
-
 clean:
-	rm -rf $(BINS).exe *.copy *.file *.data *.data.old *_dir
+	rm -rf $(BINS).exe *.copy *.file *.data *.data.old *_dir $(OBJS)

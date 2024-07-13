@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
     printf("Usage:\n\t%s <cp_strategy> <file to copy>", argv[0]);
     printf(
-        "\n\t%s <cp_strategy> <traversal_strategy> <src dir to copy> <dst dir>",
+        "\n\t%s <cp_strategy> <traversal_strategy> <src dir> <dst dir>",
         argv[0]);
     exit(1);
 
@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
       exit(1);
     };
 
+    /* Copying a file */
     if (argc == 3) {
       /* Open fd for file to copy */
       fd_from = open(argv[2], O_RDONLY);
@@ -59,6 +60,7 @@ int main(int argc, char **argv) {
       return res;
     }
 
+    /* Copying a directory */
     else if (argc == 5) {
 
       if (strcmp(argv[2], "seq") == 0) {

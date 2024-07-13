@@ -1,3 +1,4 @@
+#include <stddef.h>
 #define _GNU_SOURCE
 
 #include "cp.h"
@@ -11,28 +12,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-int fcp_wrapper(char *src, char *dst, fcp_fn fn) {
+int fcp_wrapper(char *src, char *dst, mode_t perm, size_t len, fcp_fn fn) {
   int from_fd, to_fd, res;
-  struct stat statbuf;
 
-  if ((from_fd = open(src, O_RDONLY) < 0)) {
+  if ((from_fd = open(src, O_RDONLY)) < 0) {
     perror("open");
     exit(1);
   }
 
-  /* Something weird going on here, fstat gives zero size */
-  if (fstatat(AT_FDCWD, src, &statbuf, 0) == -1) {
-    perror("stat");
-    exit(1);
-  };
-
-  if ((to_fd = creat(dst, statbuf.st_mode)) < 0) {
+  if ((to_fd = creat(dst, perm)) < 0) {
     perror("creat");
     exit(1);
   };
 
-  /* Not sure why it's hanging here */
-  res = fn(from_fd, to_fd, statbuf.st_size);
+  res = fn(from_fd, to_fd, len);
 
   close(from_fd);
   close(to_fd);
@@ -52,7 +45,7 @@ int seq_traverse(char *src, char *dst, fcp_fn fn) {
         exit(1);
     }
 
-    if (mkdir(dst, 0700) < 0) {
+    if (mkdir(dst, 0755) < 0) {
         perror("mkdir");
         exit(1);
     }
@@ -70,10 +63,8 @@ int seq_traverse(char *src, char *dst, fcp_fn fn) {
         }
 
         if (S_ISREG(statbuf.st_mode)) {
-            fcp_wrapper(src_path, dst_path, fn);
+            fcp_wrapper(src_path, dst_path, statbuf.st_mode, statbuf.st_size, fn);
         } else if (S_ISDIR(statbuf.st_mode)) {
-            printf("name of directory is %s\n", ent->d_name);
-            fflush(stdout);
             seq_traverse(src_path, dst_path, fn);
         } else {
             err(1, "Not sure how to handle this type of file: %s", src_path);
