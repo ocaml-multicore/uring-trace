@@ -1,0 +1,10 @@
+(executable
+ (name cp)
+ (libraries uring unix))
+
+(rule
+ (mode
+  (promote (until-clean)))
+ (target bigfile)
+ (action
+  (bash "fallocate -l 1Gb %{target}")))

@@ -1,0 +1,9 @@
+[global]
+stonewall
+readwrite=rw
+size=1Gb
+io_size=2Gb
+blocksize=4096
+
+[sync]
+ioengine=sync
