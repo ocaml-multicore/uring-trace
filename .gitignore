@@ -1,3 +1,10 @@
+# bigdirs
+src/
+dst/
+root/
+big_dir/
+big_dir.copy/
+
 *.annot
 *.cmo
 *.cma

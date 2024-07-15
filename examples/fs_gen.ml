@@ -64,19 +64,20 @@ module Bench_dir = struct
     aux Fiber.List.iter fs t
 end
 
-let file name = Bench_dir.File { name; perm = 0o644; size = 4000L }
+let file name size = Bench_dir.File { name; perm = 0o644; size }
 
 let dir name children =
   Bench_dir.Dir { name; size = Bench_dir.size_dir; perm = 0o700; children }
 
-let random_bench_dir ~n ~levels ~rootname =
+let random_bench_dir ~n ~levels ~rootname ~filesize =
   if levels < 1 then invalid_arg "Levels should be >= 1";
   let rec loop root = function
     | 1 -> (
         match root with
         | Bench_dir.Dir d ->
             let leaf_files =
-              List.init n (fun i -> file (Fmt.str "test-file-%i-%i" 1 i))
+              List.init n (fun i ->
+                  file (Fmt.str "test-file-%i-%i" 1 i) filesize)
             in
             Bench_dir.Dir { d with children = leaf_files }
         | _ -> failwith "Root is always expected to be a directory")
@@ -84,7 +85,8 @@ let random_bench_dir ~n ~levels ~rootname =
         match root with
         | Bench_dir.Dir d ->
             let files =
-              List.init n (fun i -> file (Fmt.str "test-file-%i-%i" level i))
+              List.init n (fun i ->
+                  file (Fmt.str "test-file-%i-%i" level i) filesize)
             in
             let dirs =
               List.init n (fun i -> dir (Fmt.str "test-dir-%i-%i" level i) [])
@@ -95,12 +97,13 @@ let random_bench_dir ~n ~levels ~rootname =
   in
   loop (dir rootname []) levels
 
-let gen ~n ~levels ~root ~rootname ~clock =
-  let dir = random_bench_dir ~levels ~n ~rootname |> Bench_dir.sort in
+let gen ~n ~levels ~root ~rootname ~clock ~filesize =
+  let dir = random_bench_dir ~levels ~n ~rootname ~filesize |> Bench_dir.sort in
   let size, count = Bench_dir.size_count dir in
   let size_mb = Int64.(div size (of_int 1_000_000)) in
   traceln
-    "Going to create %i files and directories (%Ld Mb apparent size), are you sure? (y/n) "
+    "Going to create %i files and directories (%Ld Mb apparent size), are you \
+     sure? (y/n) "
     count size_mb;
   match read_line () with
   | "n" -> exit 0
@@ -122,4 +125,5 @@ let () =
   let levels = try Sys.argv.(2) |> int_of_string with _ -> 4 in
   let root = try fs / Sys.argv.(3) with _ -> fs in
   let rootname = try Sys.argv.(4) with _ -> "root" in
-  gen ~n ~levels ~root ~rootname ~clock
+  let filesize = try Int64.of_string Sys.argv.(5) with _ -> 4096L in
+  gen ~n ~levels ~root ~rootname ~clock ~filesize

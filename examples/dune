@@ -1,3 +1,5 @@
 (executables
- (names cp fs_gen)
+ (names cp fs_gen bench_blks)
  (libraries eio eio_main))
+
+(dirs :standard \ src dst c)

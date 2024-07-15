@@ -46,6 +46,8 @@ int sp_cp(int from, int to, size_t len) {
     }
   };
 
+  close(pipefd[0]);
+  close(pipefd[1]);
   return 0;
 }
 

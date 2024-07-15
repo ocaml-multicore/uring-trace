@@ -45,8 +45,8 @@ let rec copy_dfs_1 ?(depth = 3) ~src ~dst () =
       Flow.copy source sink
   | _ -> failwith "Not sure how to handle kind"
 
-let copy_dfs_2 ~src ~dst =
-  let sem = Semaphore.make 4 in
+let copy_dfs_2 ?(max_fibers = 4) ~src ~dst () =
+  let sem = Semaphore.make max_fibers in
   let rec aux ~src ~dst =
     let stat = Path.stat ~follow:false src in
     match stat.kind with
@@ -69,6 +69,33 @@ let copy_dfs_2 ~src ~dst =
     | _ -> failwith "Not sure how to handle kind"
   in
   aux ~src ~dst
+
+(* Maximum number of open file descriptors is 1024, since we fork only
+   when we encounter a directory, to exceed the limit, there has to be
+   more than 512 directories (Since each fiber can be blocked with 2
+   fd's open, 1 to read and 1 to write). Typically, we have more files
+   than directories, so this design should suffice. *)
+let copy_dfs_3 ~src ~dst () =
+  let rec aux ~sw ~src ~dst =
+    let stat = Path.stat ~follow:false src in
+    match stat.kind with
+    | `Directory ->
+        (* Opens 1 FD *)
+        Path.mkdir ~perm:stat.perm dst;
+        let files = Path.read_dir src in
+        Fiber.fork ~sw (fun () ->
+            List.iter
+              (fun basename ->
+                aux ~sw ~src:(src / basename) ~dst:(dst / basename))
+              files)
+    | `Regular_file ->
+        (* Opens 2 FDs *)
+        Path.with_open_in src @@ fun source ->
+        Path.with_open_out ~create:(`Exclusive stat.perm) dst @@ fun sink ->
+        Flow.copy source sink
+    | _ -> failwith "Not sure how to handle kind"
+  in
+  Switch.run ~name:"copy" (fun sw -> aux ~sw ~src ~dst)
 
 (* let copy  ~src ~dst () = *)
 (*   let module Q = Eio_utils.Lf_queue in *)
@@ -114,12 +141,12 @@ let copy_kentookura ?(debug = false) ~src ~dst () =
   aux ~src ~dst
 
 let () =
-  Eio_main.run @@ fun env ->
+  Eio_linux.run ~block_size:1_000_000 @@ fun env ->
   let cwd = Eio.Stdenv.cwd env in
   let src = cwd / Sys.argv.(1) in
   let dst = cwd / Sys.argv.(2) in
   let algo = try Sys.argv.(3) with _ -> "kw" in
   match algo with
-  | "kw" -> copy_dfs_2 ~src ~dst
+  | "kw" -> copy_dfs_2 ~max_fibers:4 ~src ~dst ()
   | "kentookura" -> copy_kentookura ~src ~dst ()
   | _ -> failwith "algo is one of <kw/kentookura>"
