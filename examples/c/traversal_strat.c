@@ -74,3 +74,7 @@ int seq_traverse(char *src, char *dst, fcp_fn fn) {
     closedir(dir);
     return 0;
 }
+/* int posix_traverse(char *src, char *dst, fcp_fn fn){ */
+
+
+/* } */

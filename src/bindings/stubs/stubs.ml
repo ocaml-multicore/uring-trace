@@ -282,8 +282,7 @@ module Bindings (T : Cstubs_structs.TYPE) = struct
     let t = structure "io_init_new_worker"
     let ( -: ) ty label = field t label ty
     let io_worker_tid = int -: "io_worker_tid"
-    let _ = seal (t : [`Io_init_new_worker] Ctypes.structure typ)
-
+    let _ = seal (t : [ `Io_init_new_worker ] Ctypes.structure typ)
   end
 
   module Event = struct

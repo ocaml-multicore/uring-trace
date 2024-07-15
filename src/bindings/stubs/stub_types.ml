@@ -89,7 +89,8 @@ type sqe_flags =
 (*  * IORING_CQE_F_NOTIF	Set for notification CQEs. Can be used to distinct *)
 (*  * 			them from sends. *)
 (*  */ *)
-type cqe_flags = BUFFER | MORE | SOCK_NONEMPTY | NOTIF [@@deriving show {with_path = false}]
+type cqe_flags = BUFFER | MORE | SOCK_NONEMPTY | NOTIF
+[@@deriving show { with_path = false }]
 
 type tracepoint_t =
   | IO_URING_CREATE

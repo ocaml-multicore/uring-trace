@@ -56,7 +56,7 @@ let create_worker_ev ?args t ~pid ~tid ~worker_tid ~name ~comm ~ts =
     ~name:track_name `Thread thread.tid;
   (* This spawn event should be displayed under the actual thread that
      called it *)
-  FW.instant_event ?args t.fxt ~name ~thread:(FW.{pid; tid}) ~category ~ts
+  FW.instant_event ?args t.fxt ~name ~thread:FW.{ pid; tid } ~category ~ts
 
 (* Flow events are usually applied to span events. However our use for
    flows here are to connect tracepoints. To get flow events to mimic
