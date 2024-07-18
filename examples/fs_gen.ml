@@ -102,20 +102,15 @@ let gen ~n ~levels ~root ~rootname ~clock ~filesize =
   let size, count = Bench_dir.size_count dir in
   let size_mb = Int64.(div size (of_int 1_000_000)) in
   traceln
-    "Going to create %i files and directories (%Ld Mb apparent size), are you \
-     sure? (y/n) "
+    "Creating %i files and directories (%Ld Mb apparent size)\n"
     count size_mb;
-  match read_line () with
-  | "n" -> exit 0
-  | "y" ->
-      let create_time =
-        let t0 = Eio.Time.now clock in
-        Bench_dir.make root dir;
-        let t1 = Eio.Time.now clock in
-        t1 -. t0
-      in
-      traceln "Created in %.2f s" create_time
-  | _ -> failwith "Input not recognized"
+  let create_time =
+    let t0 = Eio.Time.now clock in
+    Bench_dir.make root dir;
+    let t1 = Eio.Time.now clock in
+    t1 -. t0
+  in
+  traceln "Created in %.2f s" create_time
 
 let () =
   Eio_linux.run @@ fun env ->
