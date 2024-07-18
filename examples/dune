@@ -1,5 +1,11 @@
 (executables
- (names cp fs_gen bench_blks)
- (libraries eio eio_main))
+ (names fs_gen cp)
+ (libraries eio eio_linux cp_imp)
+ (modules fs_gen cp))
 
-(dirs :standard \ src dst c)
+(library
+ (name cp_imp)
+ (libraries eio)
+ (modules cp_imp))
+
+(dirs :standard \ src dst root root.copy big_dir big_dir.copy c)

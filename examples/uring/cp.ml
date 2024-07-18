@@ -1,4 +1,4 @@
-let bufsz = 4096
+let bufsz = 1000000
 let filepath = "bigfile"
 
 let with_file_to_copy f =
@@ -46,11 +46,8 @@ let link ring (current_op : 'a Uring.job option) next_op =
 
 let uring_rw_cp ring in_fd pos out_fd buf filesize =
   let ( >>= ) = link ring in
-  let filesize =  Optint.Int63.of_int filesize in
+  let filesize = Optint.Int63.of_int filesize in
   let rec aux file_offset =
-    Printf.printf "file_offset %d filesize %d\n%!"
-      (Optint.Int63.to_int file_offset)
-      (Optint.Int63.to_int filesize);
     if Optint.Int63.compare file_offset filesize >= 0 then ()
     else
       Uring.read ring ~file_offset in_fd buf () >>= fun res _data ->
@@ -83,14 +80,40 @@ let uring_rwv_cp ring in_fd pos out_fd iovec =
     (Uring.writev ring ~file_offset:(Optint.Int63.of_int pos) out_fd iovec ())
     (fun _ _ -> pos + (depth * bufsz))
 
-let uring_writev_cp () =
+let uring_rwv_cp_improved ring in_fd pos out_fd iovec =
+  let depth = List.length iovec in
+  List.iteri
+    (fun i buf ->
+      let pos = (i * bufsz) + pos |> Optint.Int63.of_int in
+      assert (Uring.read ring ~file_offset:pos in_fd buf () |> Option.is_some))
+    iovec;
+  assert (Uring.submit ring = depth);
+  for _i = 1 to depth do
+    match Uring.wait ring with
+    | None -> failwith "Missed completion call"
+    | Some _ -> ()
+  done;
+  List.iteri
+    (fun i buf ->
+      let pos = (i * bufsz) + pos |> Optint.Int63.of_int in
+      assert (Uring.write ring ~file_offset:pos out_fd buf () |> Option.is_some))
+    iovec;
+  assert (Uring.submit ring = depth);
+  for _i = 1 to depth do
+    match Uring.wait ring with
+    | None -> failwith "Missed completion call"
+    | Some _ -> ()
+  done;
+  pos + (depth * bufsz)
+
+let uring_vec_cp rw =
   let queue_depth = 64 in
   let ring = Uring.create ~queue_depth () in
   let iovec = List.init queue_depth (fun _ -> Cstruct.create bufsz) in
   let rec copy in_fd offset out_fd filesize =
     if offset >= filesize then ()
     else if filesize - offset >= Cstruct.lenv iovec then
-      let next_offset = uring_rwv_cp ring in_fd offset out_fd iovec in
+      let next_offset = rw ring in_fd offset out_fd iovec in
       copy in_fd next_offset out_fd filesize
     else uring_rw_cp ring in_fd offset out_fd (List.hd iovec) filesize
   in
@@ -101,5 +124,6 @@ let () =
   | "reg" -> reg_cp ()
   | "chan" -> chan_cp ()
   | "uring" -> uring_cp ()
-  | "uring_writev" -> uring_writev_cp ()
+  | "uring_vec" -> uring_vec_cp uring_rwv_cp
+  | "uring_vec_fast" -> uring_vec_cp uring_rwv_cp_improved
   | (exception _) | _ -> failwith "Usage error"

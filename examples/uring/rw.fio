@@ -1,9 +1,15 @@
 [global]
 stonewall
 readwrite=rw
-size=1Gb
 io_size=2Gb
-blocksize=4096
+filesize=1Gb
+blocksize=8192
+directory=/tmp
 
 [sync]
 ioengine=sync
+
+[uring]
+ioengine=io_uring
+iodepth=64
+iodepth_batch=0

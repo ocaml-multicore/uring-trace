@@ -1,0 +1,130 @@
+* Blog post
+
+** Intro
+
+ Performance engineering is tricky. It gets even more complicated when
+ you're dealing with concurrent systems. Recently, I've been playing
+ around with using **eio**, an effects-based IO concurrency library in
+ OCaml. However, writing performant code with eio is not completely
+ fool-proof, it requires some understanding of what's going on under
+ the hood to get things to go faster.
+
+Before we carry on, a little bit of explanation of what "effects-based
+IO currency" is... Eio is an OCaml effects-based concurrency
+library. Currently, it supports 2 backends on linux, a posix one and
+iouring. IO-uring has been in the news lately for being the hot kid on
+the block for fast IO. So it'll be interesting to compare the
+performance of the two.
+
+(Explain how concurrency can speed up code, emphasize
+non-blocking io)
+(couple of knobs to twiddle and since the library is
+relatively young.)
+
+** A problem
+
+  A discussion post about writing an efficient recursive copy piqued
+  my interest and I thought it would be a good launch pad to
+  understand performant code against storage IO. This post will
+  explore the steps I took to implement an efficient recursive
+  directory copy with eio.
+
+** Methodology
+
+- For a first approximation we should take a baseline by looking at
+  the system default coreutils cp implementation. Under the hood, it
+  doesn't use any concurrency and just performs a sequential walk
+  through the directory using blocking syscalls. In theory, we should
+  be able to design a faster concurrent version of the algorithm that
+  uses non-blocking syscalls.
+
+*** Starting algorithm
+
+```ocaml
+kentokura's version
+```
+(explanation in text of the concurrency)
+(considerations such as number of maximum FD's)
+
+** Results
+*** Benchmark 1:
+  no. files: 3905
+  directory depth: 5
+  file size: 4Kb
+
+  coreutils cp: 117 ms
+  eio cp: 212 ms
+
+- Turns out, there's a bit of a gap between the performance we expect
+  and what we actually observe. Thinking for a moment, there are a few
+  things to consider.
+
+  1. The cost of each syscall could be so cheap that it doesn't
+     benefit us to spawn a new fiber for each call.
+
+  2. The underlying syscall used between coreutils and eio is
+     different. Coreutils uses copy_file_range() api which is a linux
+     specific API for performing in kernel copies between 2 file
+     descriptors. Eio however, uses a standard read/write loop with a
+     standard buffer size of 4096.
+
+  3. Are we structuring our concurrency effectively to make use of the
+     non-blocking calls?
+
+Lets go through the list and see if our hypothesis is correct. Let's
+see what happens when we increase the size of our files to 1Mb
+
+*** Benchmark 2:
+  no. files: 3905
+  directory depth: 5
+  file size: **1Mb**
+
+  coreutils cp:
+  eio cp:
+
+**** Why so much slower?
+Hmm this is strange, let's use strace to see what could be happening
+with the syscalls. (Insert image of strace) We can't see anything much
+beyond the fact of io_uring_enter. (Explain what is iouring and why we
+can't see it). Instead, now we use perf events to capture the
+arguments of the calls. We can now observe that there are many
+io_uring_enter calls. That seems strange, there is only 3905
+files. 80k submits is excessive. Turns out the default block size for
+a copy is 4096. We'd probably want to increase that to match the size
+of the files.
+
+*** Benchmark 3: increasing *blk_size* to 1Mb
+  no. files: 3905
+  directory depth: 5
+  file size: 1Mb
+
+  coreutils cp: 14.554 s
+  eio cp: 9.163 s
+
+*** Bonus
+Is eio structuring it's concurrency well with io-uring?
+
+- To approach the first case, we do some simple benchmarks to notice
+  the performance difference between the different raw API's. It's
+  noticeable but shouldn't entirely be bottleneck. We can try changing
+  the buffer size, and notice that this makes a difference too.
+
+- Next we
+
+
+** Conclusion
+The benefits of disc concurrent reads and writes are primarily only
+visible on cold cache. We observe almost 2x improvement with the eio
+workload when the program is run on a cold cache vs the sequential
+version. However, if pages are in cache, then eio's performs worse
+than the sequential version.
+
+Unfortunately, trying to write sections of the code with eio API's
+sequentially doesn't perform the way we expect, probably because we
+end up going through iouring sequentially. We are better off using the
+Unix module API's, but I don't know how ideal it is to mix the API's
+
+** Other findings
+Enabling SQPOLL should theoretically improve throughput but that's not
+what we observe. Primarily, we still see roughly the same number of
+syscalls.
