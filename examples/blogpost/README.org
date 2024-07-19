@@ -128,3 +128,16 @@ Unix module API's, but I don't know how ideal it is to mix the API's
 Enabling SQPOLL should theoretically improve throughput but that's not
 what we observe. Primarily, we still see roughly the same number of
 syscalls.
+
+
+* Notes
+- note that when the destination directory exists and the next
+  benchmark has to truncate & overwrite files, this is very slow for
+  some reason.
+
+- When testing, you need to ensure to really write the files to disk
+  with an explicit fsync. If not, the results report the writes that
+  have made it to the kernel but not neccesarily persisting in storage.
+
+
+- Setup google doc for the blog post

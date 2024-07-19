@@ -39,6 +39,7 @@ validate: cp.exe cp.c text.file
 
 bench_c_api: cp.exe 1gb.file
 	hyperfine --warmup 5 \
+		  --prepare "echo 3 | sudo tee /proc/sys/vm/drop_caches; rm -f 1gb.file.copy" \
 		  --export-json=$(RES_DIR)/cp_api_uncached.json \
 		  --parameter-list strategy rw,sp,sf,cf \
 		  './$< {strategy} 1gb.file'

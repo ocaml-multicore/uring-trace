@@ -5,41 +5,41 @@ DST=dst
 RES_DIR=results
 EIO_CP=../_build/default/bench/eio_cp.exe
 
-# Get test dependencies
-echo "Installing dependencies"
-opam switch create .. --deps-only
-eval $(opam env)
-dune build -- ./eio_cp.exe
-sudo apt install hyperfine fio
+# # Get test dependencies
+# echo "Installing dependencies"
+# opam switch create .. --deps-only
+# eval $(opam env)
+# dune build -- ./eio_cp.exe
+# sudo apt install hyperfine fio
 
-echo "Writing a test big file..."
-fallocate -l 1G $FILE
+# echo "Writing a test big file..."
+# fallocate -l 1G $FILE
 
-echo "Building cp.exe"
-make -C c cp.exe
+# echo "Building cp.exe"
+# make -C c cp.exe
 
-echo "Creating results directory"
-mkdir $RES_DIR
+# echo "Creating results directory"
+# mkdir $RES_DIR
 
-echo "FIO expectation"
-fio --name=copy --rw=rw --io_size=2Gb \
-    --filesize=1Gb --blocksize=8192 --directory=/tmp \
-    --ioengine=sync --output=$RES_DIR/expectations.txt
+# echo "FIO expectation"
+# fio --name=copy --rw=rw --io_size=2Gb \
+#     --filesize=1Gb --blocksize=8192 --directory=/tmp \
+#     --ioengine=sync --output=$RES_DIR/expectations.txt
 
-echo "Running benchmarks for C-api"
-hyperfine --warmup 5 \
-	  --export-json "$RES_DIR/cp_api_cached.json" \
-	  --parameter-list strategy rw,sp,sf,cf \
-	  "./c/cp.exe {strategy} ${FILE}"
+# echo "Running benchmarks for C-api"
+# hyperfine --warmup 5 \
+# 	  --export-json "$RES_DIR/cp_api_cached.json" \
+# 	  --parameter-list strategy rw,sp,sf,cf \
+# 	  "./c/cp.exe {strategy} ${FILE}"
 
-hyperfine --warmup 5 \
-          --setup "sudo -v" \
-	  --prepare "sync; echo 3 | sudo tee /proc/sys/vm/drop_caches" \
-	  --export-json "$RES_DIR/cp_api_uncached.json" \
-	  --parameter-list strategy rw,sp,sf,cf \
-	  "./c/cp.exe {strategy} ${FILE}"
+# hyperfine --warmup 5 \
+#           --setup "sudo -v" \
+# 	  --prepare "sync; echo 3 | sudo tee /proc/sys/vm/drop_caches" \
+# 	  --export-json "$RES_DIR/cp_api_uncached.json" \
+# 	  --parameter-list strategy rw,sp,sf,cf \
+# 	  "./c/cp.exe {strategy} ${FILE}"
 
-for dir_params in "5 6 8192" "5 4 1000000"
+for dir_params in "5 4 1000000"
 do
     set -- $dir_params
     echo "Building test directory"
