@@ -2,7 +2,7 @@
 OUTPUT := output
 CLANG ?= clang
 LLVM_STRIP ?= llvm-strip
-BPFTOOL ?= /usr/sbin/bpftool
+BPFTOOL ?= bpftool
 CFLAGS := -g -Wall -fPIC
 ARCH := $(shell uname -m)
 ARCH_SHORTHAND ?= $(shell uname -m | sed 's/x86_64/x86/' \
@@ -52,7 +52,7 @@ $(OUTPUT)/%.skel.h: $(OUTPUT)/%.bpf.o | $(OUTPUT)
 	$(Q)$(BPFTOOL) gen skeleton $< > $@
 
 # Build BPF code
-$(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(VMLINUX) | $(OUTPUT)
+$(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) | $(OUTPUT)
 	$(call msg,BPF,$@)
 	$(Q)$(CLANG) -g -O2 -target bpf \
 		-D__TARGET_ARCH_$(ARCH_SHORTHAND) \
@@ -61,8 +61,8 @@ $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(VMLINUX) | $(OUTPUT)
 		     $(INCLUDES) -c $(filter %.c,$^) -o $@
 	# $(Q)$(LLVM_STRIP) -g $@
 
-$(VMLINUX):
-	/sbin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
+# $(VMLINUX):
+# 	/sbin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
 
 # delete failed targets
 .DELETE_ON_ERROR:
