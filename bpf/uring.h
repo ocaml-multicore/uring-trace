@@ -5,20 +5,6 @@
 #define TASK_COMM_LEN 16
 #define MAX_OP_STR_LEN 127
 
-/* Shim for old kernel versions */
-struct trace_event_raw_io_uring_submit_sqe {
-	struct trace_entry ent;
-	void *ctx;
-	void *req;
-	long long unsigned int user_data;
-	u8 opcode;
-	u32 flags;
-	bool force_nonblock;
-	bool sq_thread;
-	u32 __data_loc_op_str;
-	char __data[0];
-};
-
 enum tracepoint_t {
   IO_URING_CREATE,
   IO_URING_REGISTER,
