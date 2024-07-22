@@ -1,7 +1,8 @@
-#include "vmlinux.h"
+#include "vmlinux_61.h"
 #include "uring.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+#include <bpf/bpf_core_read.h>
 
 extern u32 LINUX_KERNEL_VERSION __kconfig;
 
@@ -150,51 +151,73 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
   return 0;
 }
 
-/* This is a hacky way to load the right tracepoints */
-#if (MAJOR_VERSION <= 6 && MINOR_VERSION < 3)
-/* Shim for old kernel versions */
-struct trace_event_raw_io_uring_submit_sqe {
-	struct trace_entry ent;
-	void *ctx;
-	void *req;
-	long long unsigned int user_data;
-	u8 opcode;
-	u32 flags;
-	bool force_nonblock;
-	bool sq_thread;
-	u32 __data_loc_op_str;
-	char __data[0];
-};
+/* Shim for newer kernels */
+struct trace_event_raw_io_uring_submit_req {
+  struct trace_entry ent;
+  void *ctx;
+  void *req;
+  long long unsigned int user_data;
+  u8 opcode;
+  u32 flags;
+  bool sq_thread;
+  u32 __data_loc_op_str;
+  char __data[0];
+} __attribute__((preserve_access_index));
 
 SEC("tp/io_uring/io_uring_submit_sqe")
-int handle_submit_req(struct trace_event_raw_io_uring_submit_sqe *ctx) {
-#else  
-SEC("tp/io_uring/io_uring_submit_req")
-int handle_submit_req(struct trace_event_raw_io_uring_submit_req *ctx) {
-#endif
+int handle_submit_req(void *ctx) {
   struct event *e;
   struct io_uring_submit_sqe *extra;
-
   unsigned op_str_off;
 
   __incr(&total_idx);
-  if (__filter_event(ctx->req))
+
+  if (bpf_core_type_exists(struct trace_even_raw_io_uring_req)) {
+    struct trace_event_raw_io_uring_submit_req *args = ctx;
+
+    if (__filter_event(args->req))
+      return 0;
+
+    /* bpf_printk("submit %d", args->req); */
+    e = __init_event(IO_URING_SUBMIT_SQE);
+    if (e == NULL)
+      return 0;
+
+    extra = &(e->io_uring_submit_sqe);
+    extra->ctx = args->ctx;
+    extra->req = args->req;
+    extra->opcode = args->opcode;
+    extra->flags = args->flags;
+    extra->sq_thread = args->sq_thread;
+    op_str_off = args->__data_loc_op_str & 0xFFFF;
+    bpf_probe_read_str(&(extra->op_str), sizeof(extra->op_str),
+		       (void *)args + op_str_off);
+
+    bpf_ringbuf_submit(e, 0);
     return 0;
 
-  /* bpf_printk("submit %d", ctx->req); */
-  e = __init_event(IO_URING_SUBMIT_SQE);
-  if (e == NULL)
-    return 0;
+  } else {
+    struct trace_event_raw_io_uring_submit_sqe *args = ctx;
 
-  extra = &(e->io_uring_submit_sqe);
-  extra->ctx = ctx->ctx;
-  extra->req = ctx->req;
-  extra->opcode = ctx->opcode;
-  extra->flags = ctx->flags;
-  extra->sq_thread = ctx->sq_thread;
-  op_str_off = ctx->__data_loc_op_str & 0xFFFF;
-  bpf_probe_read_str(&(extra->op_str), sizeof(extra->op_str),
-                     (void *)ctx + op_str_off);
+    if (__filter_event(args->req))
+      return 0;
+
+    /* bpf_printk("submit %d", args->req); */
+    e = __init_event(IO_URING_SUBMIT_SQE);
+    if (e == NULL)
+      return 0;
+
+    extra = &(e->io_uring_submit_sqe);
+    extra->ctx = args->ctx;
+    extra->req = args->req;
+    extra->opcode = args->opcode;
+    extra->flags = args->flags;
+    extra->sq_thread = args->sq_thread;
+    op_str_off = args->__data_loc_op_str & 0xFFFF;
+    bpf_probe_read_str(&(extra->op_str), sizeof(extra->op_str),
+		       (void *)args + op_str_off);
+
+  }
 
   bpf_ringbuf_submit(e, 0);
   return 0;
@@ -202,7 +225,7 @@ int handle_submit_req(struct trace_event_raw_io_uring_submit_req *ctx) {
 
 SEC("tp/io_uring/io_uring_queue_async_work")
 int handle_queue_async_work(
-    struct trace_event_raw_io_uring_queue_async_work *ctx) {
+			    struct trace_event_raw_io_uring_queue_async_work *ctx) {
   struct event *e;
   struct io_uring_queue_async_work *extra;
   unsigned op_str_off;
