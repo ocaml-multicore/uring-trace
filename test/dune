@@ -1,3 +1,7 @@
 (executable
  (name test_load)
  (libraries libbpf site))
+
+(executable
+ (name load_direct)
+ (libraries libbpf))
