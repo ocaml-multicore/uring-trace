@@ -1,10 +1,8 @@
 [global]
 stonewall
 readwrite=rw
-io_size=2Gb
-filesize=1Gb
+size=1Gb
 blocksize=8192
-directory=/tmp
 
 [sync]
 ioengine=sync

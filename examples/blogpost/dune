@@ -1,3 +1,5 @@
 (executable
  (name cp)
  (libraries eio_linux))
+
+(dirs :standard \ src dst root root.copy big_dir big_dir.copy)
