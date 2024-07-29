@@ -17,7 +17,9 @@
 
 (install
  (package uring-trace)
- (section (site (uring-trace bpf)))
+ (section
+  (site
+   (uring-trace bpf)))
  (files
   (uring-trace.bpf.o as uring-trace.bpf.o)))
 

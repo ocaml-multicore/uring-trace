@@ -128,7 +128,6 @@ let copy_kentookura_seq ?(debug = false) ~src ~dst () =
   | exception (ex : exn) -> debug_error dst ex);
   aux ~src ~dst
 
-
 let copy_kentookura ?(debug = false) ~src ~dst () =
   let debug_info =
     if debug then fun p -> Eio.Std.traceln "%a" Eio.Path.pp p else Fun.const ()

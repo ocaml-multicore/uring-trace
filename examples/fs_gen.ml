@@ -101,9 +101,8 @@ let gen ~n ~levels ~root ~rootname ~clock ~filesize =
   let dir = random_bench_dir ~levels ~n ~rootname ~filesize |> Bench_dir.sort in
   let size, count = Bench_dir.size_count dir in
   let size_mb = Int64.(div size (of_int 1_000_000)) in
-  traceln
-    "Creating %i files and directories (%Ld Mb apparent size)\n"
-    count size_mb;
+  traceln "Creating %i files and directories (%Ld Mb apparent size)\n" count
+    size_mb;
   let create_time =
     let t0 = Eio.Time.now clock in
     Bench_dir.make root dir;

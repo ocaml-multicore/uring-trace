@@ -34,10 +34,9 @@ let copy_kentookura ?(debug = false) ~src ~dst () =
   | exception (ex : exn) -> debug_error dst ex);
   aux ~src ~dst
 
-
 let () =
   let block_size = try int_of_string Sys.argv.(3) with _ -> 4096 in
-  Eio_linux.run  ~block_size @@ fun env ->
+  Eio_linux.run ~block_size @@ fun env ->
   let cwd = Eio.Stdenv.cwd env in
   let src = cwd / Sys.argv.(1) in
   let dst = cwd / Sys.argv.(2) in
