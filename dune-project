@@ -1,4 +1,5 @@
 (lang dune 3.13)
+(using dune_site 0.1)
 
 (name uring-trace)
 
@@ -18,11 +19,13 @@
 
 (package
  (name uring-trace)
+ (sites (share bpf))
  (synopsis "IO-uring tracing tool using eBPF probes")
  (depends
   ocaml
   dune
-  eio_main
+  dune-site
+  eio_linux
   libbpf
   libbpf_maps
   conf-liburing

@@ -70,8 +70,7 @@ let load_run ~sampling ~poll_behaviour ~bpf_object_path ~bpf_program_names
             (str_of_long total) (str_of_long lost) (str_of_long skipped)
             (str_of_long unrelated) (str_of_long user)))
 
-let run ?(tracefile = "trace.fxt") ?(sampling = false)
-    ?(poll_behaviour = Poll 100) ~bpf_object_path ~bpf_program_names callback =
+let run ~tracefile ~sampling ~poll_behaviour =
   Eio_linux.run @@ fun env ->
   Eio.Switch.run (fun sw ->
       let output_file = Eio.Path.( / ) (Eio.Stdenv.cwd env) tracefile in
@@ -81,6 +80,6 @@ let run ?(tracefile = "trace.fxt") ?(sampling = false)
       Eio.Buf_write.with_flow out (fun w ->
           let writer = W.make (W.FW.of_writer w) in
           try
-            load_run ~sampling ~poll_behaviour ~bpf_object_path
-              ~bpf_program_names ~writer callback
+            load_run ~sampling ~poll_behaviour ~bpf_object_path:Site.bpf_object_path
+              ~bpf_program_names:Site.bpf_program_names ~writer Handler.handle_event
           with Exit i -> Printf.eprintf "exit %d\n" i))
