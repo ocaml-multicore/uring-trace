@@ -1,4 +1,5 @@
 (lang dune 3.13)
+
 (using dune_site 0.1)
 
 (name uring-trace)
@@ -10,26 +11,31 @@
 
 (maintainers "Lee Koonwen")
 
-(documentation "https://github.com/koonwen/uring-trace")
+(documentation https://github.com/koonwen/uring-trace)
 
 (package
  (name conf-liburing)
  (allow_empty)
- (synopsis "Virtual package for system installation of liburing"))
+ (synopsis "Virtual package for system installation of liburing")
+ (depends))
 
 (package
  (name uring-trace)
- (sites (share bpf))
+ (sites
+  (share bpf))
  (synopsis "IO-uring tracing tool using eBPF probes")
  (depends
+  (ppx_deriving
+   (>= 6.0.2))
+  (eio
+   (>= 1.1))
   ocaml
   dune
   dune-site
+  cmdliner
   eio_linux
   libbpf
   libbpf_maps
   conf-liburing
   conf-bpftool
   ctypes))
-
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
