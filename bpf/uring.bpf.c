@@ -152,72 +152,72 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
 }
 
 /* Shim for newer kernels */
-/* struct trace_event_raw_io_uring_submit_req { */
-/*   struct trace_entry ent; */
-/*   void *ctx; */
-/*   void *req; */
-/*   long long unsigned int user_data; */
-/*   u8 opcode; */
-/*   u32 flags; */
-/*   bool sq_thread; */
-/*   u32 __data_loc_op_str; */
-/*   char __data[0]; */
-/* } __attribute__((preserve_access_index)); */
+struct trace_event_raw_io_uring_submit_req {
+  struct trace_entry ent;
+  void *ctx;
+  void *req;
+  long long unsigned int user_data;
+  u8 opcode;
+  u32 flags;
+  bool sq_thread;
+  u32 __data_loc_op_str;
+  char __data[0];
+} __attribute__((preserve_access_index));
 
 SEC("tp/io_uring/io_uring_submit_sqe")
-int handle_submit_req(struct trace_event_raw_io_uring_submit_sqe *ctx) {
+int handle_submit_req(void *ctx) {
   struct event *e;
   struct io_uring_submit_sqe *extra;
   unsigned op_str_off;
 
   __incr(&total_idx);
 
-  /* if (bpf_core_type_exists(struct trace_event_raw_io_uring_req)) { */
-  /*   struct trace_event_raw_io_uring_submit_req *args = ctx; */
+  if (LINUX_KERNEL_VERSION >= KERNEL_VERSION(6,3,0)){
+    struct trace_event_raw_io_uring_submit_req *args = ctx;
 
-  /*   if (__filter_event(args->req)) */
-  /*     return 0; */
-
-  /*   /\* bpf_printk("submit %d", args->req); *\/ */
-  /*   e = __init_event(IO_URING_SUBMIT_SQE); */
-  /*   if (e == NULL) */
-  /*     return 0; */
-
-  /*   extra = &(e->io_uring_submit_sqe); */
-  /*   extra->ctx = args->ctx; */
-  /*   extra->req = args->req; */
-  /*   extra->opcode = args->opcode; */
-  /*   extra->flags = args->flags; */
-  /*   extra->sq_thread = args->sq_thread; */
-  /*   op_str_off = args->__data_loc_op_str & 0xFFFF; */
-  /*   bpf_probe_read_str(&(extra->op_str), sizeof(extra->op_str), */
-  /* 		       (void *)args + op_str_off); */
-
-  /*   bpf_ringbuf_submit(e, 0); */
-  /*   return 0; */
-
-  /* } else { */
-    /* struct trace_event_raw_io_uring_submit_sqe *args = ctx; */
-
-    if (__filter_event(ctx->req))
+    if (__filter_event(args->req))
       return 0;
 
-    /* bpf_printk("submit %d", ctx->req); */
+    /* bpf_printk("submit %d", args->req); */
     e = __init_event(IO_URING_SUBMIT_SQE);
     if (e == NULL)
       return 0;
 
     extra = &(e->io_uring_submit_sqe);
-    extra->ctx = ctx->ctx;
-    extra->req = ctx->req;
-    extra->opcode = ctx->opcode;
-    extra->flags = ctx->flags;
-    extra->sq_thread = ctx->sq_thread;
-    op_str_off = ctx->__data_loc_op_str & 0xFFFF;
+    extra->ctx = args->ctx;
+    extra->req = args->req;
+    extra->opcode = args->opcode;
+    extra->flags = args->flags;
+    extra->sq_thread = args->sq_thread;
+    op_str_off = args->__data_loc_op_str & 0xFFFF;
     bpf_probe_read_str(&(extra->op_str), sizeof(extra->op_str),
-		       (void *)ctx + op_str_off);
+		       (void *)args + op_str_off);
 
-  /* } */
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+
+  } else {
+    struct trace_event_raw_io_uring_submit_sqe *args = ctx;
+
+    if (__filter_event(args->req))
+      return 0;
+
+    /* bpf_printk("submit %d", args->req); */
+    e = __init_event(IO_URING_SUBMIT_SQE);
+    if (e == NULL)
+      return 0;
+
+    extra = &(e->io_uring_submit_sqe);
+    extra->ctx = args->ctx;
+    extra->req = args->req;
+    extra->opcode = args->opcode;
+    extra->flags = args->flags;
+    extra->sq_thread = args->sq_thread;
+    op_str_off = args->__data_loc_op_str & 0xFFFF;
+    bpf_probe_read_str(&(extra->op_str), sizeof(extra->op_str),
+		       (void *)args + op_str_off);
+
+  }
 
   bpf_ringbuf_submit(e, 0);
   return 0;
