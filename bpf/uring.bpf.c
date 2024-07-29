@@ -151,12 +151,26 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
 }
 
 /* This is a hacky way to load the right tracepoints */
-#if (MAJOR_VERSION >= 6 && MINOR_VERSION >= 3)
-SEC("tp/io_uring/io_uring_submit_req")
-int handle_submit_req(struct trace_event_raw_io_uring_submit_req *ctx) {
-#else
+#if (MAJOR_VERSION <= 6 && MINOR_VERSION < 3)
+/* Shim for old kernel versions */
+struct trace_event_raw_io_uring_submit_sqe {
+	struct trace_entry ent;
+	void *ctx;
+	void *req;
+	long long unsigned int user_data;
+	u8 opcode;
+	u32 flags;
+	bool force_nonblock;
+	bool sq_thread;
+	u32 __data_loc_op_str;
+	char __data[0];
+};
+
 SEC("tp/io_uring/io_uring_submit_sqe")
 int handle_submit_req(struct trace_event_raw_io_uring_submit_sqe *ctx) {
+#else
+SEC("tp/io_uring/io_uring_submit_req")
+int handle_submit_req(struct trace_event_raw_io_uring_submit_req *ctx) {
 #endif
   struct event *e;
   struct io_uring_submit_sqe *extra;
@@ -188,7 +202,7 @@ int handle_submit_req(struct trace_event_raw_io_uring_submit_sqe *ctx) {
 
 SEC("tp/io_uring/io_uring_queue_async_work")
 int handle_queue_async_work(
-			    struct trace_event_raw_io_uring_queue_async_work *ctx) {
+    struct trace_event_raw_io_uring_queue_async_work *ctx) {
   struct event *e;
   struct io_uring_queue_async_work *extra;
   unsigned op_str_off;
