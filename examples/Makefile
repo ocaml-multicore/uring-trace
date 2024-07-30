@@ -10,15 +10,21 @@ $(BIGFILE):
 $(SMALLFILE):
 	fallocate -l 20Kb $@
 
-run: $(BIGFILE)
-	dune build cp.exe
+build:
+	dune build .
+
+cat_c:
+	gcc -Wall -Werror -O2 cat.c -luring -o cat.exe
+
+run: $(BIGFILE) build
 	time $(CP) reg $< 4096
 	time $(CP) chan $< 4096
+	time cat_c $< 1gb.file.copy
 	time $(CP) uring $< 4096
 	time $(CP) uring_vec $< 4096
 	time $(CP) uring_vec_fast $< 4096
 
-trace: $(SMALLFILE)
+trace: $(SMALLFILE) build
 	$(CP) uring $< 4096
 	$(CP) uring_vec $< 4096
 	$(CP) uring_vec_fast $< 4096
