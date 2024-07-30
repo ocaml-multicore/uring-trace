@@ -1,7 +1,4 @@
-let bufsz = 1000000
-let filepath = "bigfile"
-
-let with_file_to_copy f =
+let with_file_to_copy filepath f =
   let in_fd = UnixLabels.openfile filepath ~mode:[ O_RDONLY ] ~perm:0 in
   let out_fd =
     UnixLabels.openfile (filepath ^ ".copy")
@@ -13,8 +10,8 @@ let with_file_to_copy f =
   UnixLabels.close in_fd;
   UnixLabels.close out_fd
 
-let reg_cp () =
-  with_file_to_copy (fun in_fd out_fd stat ->
+let reg_cp filepath bufsz =
+  with_file_to_copy filepath (fun in_fd out_fd stat ->
       let buf = Bytes.create bufsz in
       let left = ref stat.st_size in
       while !left > 0 do
@@ -23,7 +20,7 @@ let reg_cp () =
         UnixLabels.write out_fd ~buf ~pos:0 ~len |> ignore
       done)
 
-let chan_cp () =
+let chan_cp filepath bufsz =
   In_channel.with_open_bin filepath (fun ic ->
       Out_channel.with_open_bin (filepath ^ ".copy") (fun oc ->
           let buf = Bytes.create bufsz in
@@ -57,13 +54,26 @@ let uring_rw_cp ring in_fd pos out_fd buf filesize =
   in
   aux (Optint.Int63.of_int pos)
 
-let uring_cp () =
+let uring_cp filepath bufsz =
   let ring = Uring.create ~queue_depth:1 () in
-  with_file_to_copy (fun in_fd out_fd stat ->
+  with_file_to_copy filepath (fun in_fd out_fd stat ->
       let buf = Cstruct.create bufsz in
       uring_rw_cp ring in_fd 0 out_fd buf stat.st_size)
 
-let uring_rwv_cp ring in_fd pos out_fd iovec =
+let uring_vec_cp filepath bufsz rw =
+  let queue_depth = 64 in
+  let ring = Uring.create ~queue_depth () in
+  let iovec = List.init queue_depth (fun _ -> Cstruct.create bufsz) in
+  let rec copy in_fd offset out_fd filesize =
+    if offset >= filesize then ()
+    else if filesize - offset >= bufsz then
+      let next_offset = rw ring in_fd offset out_fd bufsz iovec in
+      copy in_fd next_offset out_fd filesize
+    else uring_rw_cp ring in_fd offset out_fd (List.hd iovec) filesize
+  in
+  with_file_to_copy filepath (fun in_fd out_fd stat -> copy in_fd 0 out_fd stat.st_size)
+
+let uring_rwv_cp ring in_fd pos out_fd bufsz iovec =
   let depth = List.length iovec in
   List.iteri
     (fun i buf ->
@@ -80,7 +90,7 @@ let uring_rwv_cp ring in_fd pos out_fd iovec =
     (Uring.writev ring ~file_offset:(Optint.Int63.of_int pos) out_fd iovec ())
     (fun _ _ -> pos + (depth * bufsz))
 
-let uring_rwv_cp_improved ring in_fd pos out_fd iovec =
+let uring_rwv_cp_improved ring in_fd pos out_fd bufsz iovec =
   let depth = List.length iovec in
   List.iteri
     (fun i buf ->
@@ -106,24 +116,18 @@ let uring_rwv_cp_improved ring in_fd pos out_fd iovec =
   done;
   pos + (depth * bufsz)
 
-let uring_vec_cp rw =
-  let queue_depth = 64 in
-  let ring = Uring.create ~queue_depth () in
-  let iovec = List.init queue_depth (fun _ -> Cstruct.create bufsz) in
-  let rec copy in_fd offset out_fd filesize =
-    if offset >= filesize then ()
-    else if filesize - offset >= Cstruct.lenv iovec then
-      let next_offset = rw ring in_fd offset out_fd iovec in
-      copy in_fd next_offset out_fd filesize
-    else uring_rw_cp ring in_fd offset out_fd (List.hd iovec) filesize
-  in
-  with_file_to_copy (fun in_fd out_fd stat -> copy in_fd 0 out_fd stat.st_size)
-
 let () =
-  match Sys.argv.(1) with
-  | "reg" -> reg_cp ()
-  | "chan" -> chan_cp ()
-  | "uring" -> uring_cp ()
-  | "uring_vec" -> uring_vec_cp uring_rwv_cp
-  | "uring_vec_fast" -> uring_vec_cp uring_rwv_cp_improved
-  | (exception _) | _ -> failwith "Usage error"
+  try
+    let strat = Sys.argv.(1) in
+    let filepath = Sys.argv.(2) in
+    let bufsz = try Sys.argv.(3) |> int_of_string with _ -> 4096 in
+    match strat with
+    | "reg" -> reg_cp filepath bufsz
+    | "chan" -> chan_cp filepath bufsz
+    | "uring" -> uring_cp filepath bufsz
+    | "uring_vec" -> uring_vec_cp filepath bufsz uring_rwv_cp
+    | "uring_vec_fast" -> uring_vec_cp filepath bufsz uring_rwv_cp_improved
+    | (exception _) | _ -> failwith "Usage error"
+  with _ ->
+    Printf.eprintf "Usage: %s <reg/chan/uring/uring_vec/uring_vec_fast"
+      Sys.argv.(0)
