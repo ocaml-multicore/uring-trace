@@ -2,10 +2,24 @@
  (public_name main)
  (name main)
  (package uring-trace)
- (libraries driver bindings fxt site)
+ (libraries driver bindings fxt)
  (modules main))
 
 (library
  (name driver)
  (libraries libbpf libbpf_maps bindings fxt eio_linux)
  (modules driver writer))
+
+(rule
+ (mode
+  (promote (until-clean)))
+ (deps
+  (source_tree %{project_root}/bpf))
+ (targets uring.bpf.o)
+ (action
+  (no-infer
+   (progn
+    (chdir
+     %{project_root}/bpf
+     (run make))
+    (copy %{project_root}/bpf/output/uring.bpf.o uring.bpf.o)))))
