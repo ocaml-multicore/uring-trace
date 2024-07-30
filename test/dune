@@ -1,3 +1,6 @@
 (executable
+ ; Declaring a public name and package is neccessary to build the site
+ (public_name test_load.uring-trace)
+ (package uring-trace)
  (name test_load)
- (libraries libbpf))
+ (libraries libbpf site))
