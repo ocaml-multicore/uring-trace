@@ -63,6 +63,8 @@ $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(VMLINUX) | $(OUTPUT)
 
 $(VMLINUX):
 	/sbin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
+	cat $(VMLINUX) | grep 'trace_event_raw_io_uring' -A 10
+	uname -r
 
 # delete failed targets
 .DELETE_ON_ERROR:
