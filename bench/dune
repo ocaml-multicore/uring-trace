@@ -1,3 +1,0 @@
-(executable
- (name eio_cp)
- (libraries eio_linux eio))
