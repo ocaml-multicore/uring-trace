@@ -7,18 +7,19 @@ homepage: "https://github.com/koonwen/uring-trace"
 doc: "https://github.com/koonwen/uring-trace"
 bug-reports: "https://github.com/koonwen/uring-trace/issues"
 depends: [
+  "ppx_deriving" {>= "6.0.2"}
+  "eio" {>= "1.1"}
   "ocaml"
   "dune" {>= "3.13"}
-  "eio_main"
+  "dune-site"
+  "cmdliner"
+  "eio_linux"
   "libbpf"
   "libbpf_maps"
   "conf-liburing"
   "conf-bpftool"
   "ctypes"
   "odoc" {with-doc}
-  "eio" {>= "1.1"}
-  "eio_linux" {>= "1.1"}
-  "ppx_deriving" {>= "6.0.2"}
 ]
 build: [
   ["dune" "subst"] {dev}
@@ -29,9 +30,11 @@ build: [
     name
     "-j"
     jobs
+    "--promote-install-files=false"
     "@install"
     "@runtest" {with-test}
     "@doc" {with-doc}
   ]
+  ["dune" "install" "-p" name "--create-install-files" name]
 ]
 dev-repo: "git+https://github.com/koonwen/uring-trace.git"

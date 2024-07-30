@@ -114,7 +114,7 @@ let copy_kentookura ?(debug = false) ~src ~dst () =
   aux ~src ~dst
 
 let () =
-  Eio_main.run @@ fun env ->
+  Eio_linux.run @@ fun env ->
   let cwd = Eio.Stdenv.cwd env in
   let src = cwd / Sys.argv.(1) in
   let dst = cwd / Sys.argv.(2) in
