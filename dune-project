@@ -4,8 +4,8 @@
 (name uring-trace)
 (source
  (github koonwen/uring-trace))
-(authors "Lee Koonwen")
-(maintainers "Lee Koonwen")
+(authors "Lee Koon Wen")
+(maintainers "Lee Koon Wen")
 (license ISC BSD-3-Clause)
 (documentation https://github.com/koonwen/uring-trace)
 
