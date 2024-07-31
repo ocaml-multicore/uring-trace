@@ -71,7 +71,8 @@ let uring_vec_cp filepath bufsz rw =
       copy in_fd next_offset out_fd filesize
     else uring_rw_cp ring in_fd offset out_fd (List.hd iovec) filesize
   in
-  with_file_to_copy filepath (fun in_fd out_fd stat -> copy in_fd 0 out_fd stat.st_size)
+  with_file_to_copy filepath (fun in_fd out_fd stat ->
+      copy in_fd 0 out_fd stat.st_size)
 
 let uring_rwv_cp ring in_fd pos out_fd bufsz iovec =
   let depth = List.length iovec in
