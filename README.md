@@ -162,18 +162,9 @@ requires root priviledges to run and it would be bad to elevate your
 process run level.
 
 ```bash
-<<<<<<< Updated upstream
-git clone git@github.com:koonwen/uring-trace.git
-cd uring-trace
-opam switch create . --deps-only -y
-opam switch pin conf-liburing.opam . -y
-cd uring-trace/src
-make run
-=======
 opam install uring-trace
 # replace $ with sudo
 $ uring-trace
->>>>>>> Stashed changes
 
 # In a separate terminal
 <execute your program>
