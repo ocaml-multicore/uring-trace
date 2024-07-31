@@ -5,7 +5,8 @@
 
 (rule
  (deps
-  (source_tree %{project_root}/bpf))
+  (source_tree %{project_root}/bpf)
+  (source_tree %{project_root}/vmlinux))
  (target uring-trace.bpf.o)
  (action
   (no-infer

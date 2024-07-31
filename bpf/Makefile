@@ -15,8 +15,8 @@ ARCH_SHORTHAND ?= $(shell uname -m | sed 's/x86_64/x86/' \
 # Kernel version
 MAJOR_VERSION := $(shell uname -r | sed -E 's/^([0-9]+).*/\1/')
 MINOR_VERSION := $(shell uname -r | sed -E 's/^[0-9]+\.([0-9]+)\..*/\1/')
-VMLINUX := ./vmlinux.h
-INCLUDES := -I$(OUTPUT) -I/usr/include/$(ARCH)-linux-gnu/
+VMLINUX := ../vmlinux/$(ARCH_SHORTHAND)/vmlinux.h
+INCLUDES := -I$(OUTPUT) -I/usr/include/$(ARCH)-linux-gnu/ -I$(dir $(VMLINUX))
 
 BINS = size
 PROBES = uring
