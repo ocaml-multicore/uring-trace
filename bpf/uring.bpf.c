@@ -150,6 +150,18 @@ int handle_file_get(struct trace_event_raw_io_uring_file_get *ctx) {
   return 0;
 }
 
+struct trace_event_raw_io_uring_submit_req {
+  struct trace_entry ent;
+  void *ctx;
+  void *req;
+  long long unsigned int user_data;
+  u8 opcode;
+  u32 flags;
+  bool sq_thread;
+  u32 __data_loc_op_str;
+  char __data[0];
+} __attribute__((preserve_access_index));
+
 /* This is a hacky way to load the right tracepoints */
 #if (MAJOR_VERSION >= 6 && MINOR_VERSION >= 3)
 SEC("tp/io_uring/io_uring_submit_req")
