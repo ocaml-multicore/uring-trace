@@ -1,16 +1,12 @@
 (lang dune 3.13)
-
 (using dune_site 0.1)
 
 (name uring-trace)
-
 (source
  (github koonwen/uring-trace))
-
 (authors "Lee Koonwen")
-
 (maintainers "Lee Koonwen")
-
+(license ISC BSD-3-Clause)
 (documentation https://github.com/koonwen/uring-trace)
 
 (package
