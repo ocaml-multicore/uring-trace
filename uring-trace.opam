@@ -17,6 +17,9 @@ depends: [
   "eio_linux"
   "libbpf"
   "libbpf_maps"
+  "lwt" {with-test}
+  "logs" {with-test}
+  "fmt" {with-test}
   "conf-liburing"
   "conf-bpftool"
   "ctypes"

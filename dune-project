@@ -33,6 +33,9 @@
   eio_linux
   libbpf
   libbpf_maps
+  (lwt (and :with-test))
+  (logs (and :with-test))
+  (fmt (and :with-test))
   conf-liburing
   conf-bpftool
   ctypes))
