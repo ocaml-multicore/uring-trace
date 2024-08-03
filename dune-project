@@ -5,7 +5,7 @@
 (source
  (github koonwen/uring-trace))
 (authors "Lee Koon Wen")
-(maintainers "Lee Koon Wen")
+(maintainers "koonwen@gmail.com")
 (license ISC BSD-3-Clause)
 (documentation https://github.com/koonwen/uring-trace)
 
