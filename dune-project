@@ -28,7 +28,8 @@
   ocaml
   dune
   dune-site
-  cmdliner
+  (cmdliner
+   (>= 1.1.0))
   eio_linux
   libbpf
   libbpf_maps
