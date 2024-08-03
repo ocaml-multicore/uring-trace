@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
@@ -8,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <liburing.h>
+#include <liburing/io_uring.h>
 
 #define QD  2
 #define BS (16 * 1024)
@@ -24,7 +27,7 @@ struct io_data {
 static int setup_context(unsigned entries, struct io_uring *ring) {
     int ret;
 
-    ret = io_uring_queue_init(entries, ring, 0);
+    ret = io_uring_queue_init(entries, ring, IORING_SETUP_COOP_TASKRUN | IORING_SETUP_TASKRUN_FLAG | IORING_SETUP_IOPOLL);
     if( ret < 0) {
         fprintf(stderr, "queue_init: %s\n", strerror(-ret));
         return -1;
@@ -42,7 +45,7 @@ static int get_file_size(int fd, off_t *size) {
         *size = st.st_size;
         return 0;
     } else if (S_ISBLK(st.st_mode)) {
-        unsigned long long bytes;
+      unsigned long long bytes;
 
         if (ioctl(fd, BLKGETSIZE64, &bytes) != 0)
             return -1;
@@ -150,7 +153,7 @@ int copy_file(struct io_uring *ring, off_t insize) {
             struct io_data *data;
 
             if (!got_comp) {
-                ret = io_uring_wait_cqe(ring, &cqe);
+	      ret = io_uring_wait_cqe(ring, &cqe);
                 got_comp = 1;
             } else {
                 ret = io_uring_peek_cqe(ring, &cqe);
@@ -217,13 +220,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    infd = open(argv[1], O_RDONLY);
+    infd = open(argv[1], O_RDONLY | O_DIRECT);
     if (infd < 0) {
         perror("open infile");
         return 1;
     }
 
-    outfd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    outfd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT, 0644);
     if (outfd < 0) {
         perror("open outfile");
         return 1;
