@@ -152,19 +152,37 @@ perfetto output won't be garbled with unrelated processes.
   - [X] Show number of io-workers
   - [X] Connected with flows
 
-# Usage
-To trace a program, you will first need to run the `uring_trace`
-binary in a separate process. The `uring_trace` will detect when a new
-uring instance is spawned and record events from there. We **do not**
-offer the option to spawn your process you want to trace directly from
-the `uring_trace` binary. This is simply because `uring_trace`
-requires root priviledges to run and it would be bad to elevate your
-process run level.
+# Install
+To get this tool, the easiest way is to download it from
+[opam](https://opam.ocaml.org/doc/Install.html), the OCaml package
+manager.
 
 ```bash
+# install opam
+bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
+
+# initialize package manager
+opam init
+
+# install binary
 opam install uring-trace
+
+# put uring-trace on path
+eval $(opam env)
+```
+
+# Usage
+To trace a program, you need to run the `uring_trace` binary as a
+separate process. The `uring_trace` will detect when a new uring
+instance is spawned and record events from there. We **do not** offer
+the option to spawn your process you want to trace directly from the
+`uring_trace` binary. This is simply because `uring_trace` requires
+root priviledges to run and it would be bad to elevate your process
+run level.
+
+```bash
 # replace $ with sudo
-$ uring-trace
+$ env "PATH=$PATH" uring-trace
 
 # In a separate terminal
 <execute your program>
