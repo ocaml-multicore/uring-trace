@@ -1,0 +1,79 @@
+# Checking the effect of writes with/wo O_DIRECT and with async
+
+# When time-based workload is used with buffered IO, performance is
+# inconsistent. Perhaps because of caching effects as the run goes on.
+
+# This nvme queue depth is 255
+# cat /sys/block/nvme0n1/queue/nr_requests
+
+[global]
+rw=write
+bs=4096
+directory=tmp
+size=2G
+ramp_time=2s
+time_based=1
+runtime=10s
+invalidate=1
+end_fsync=1
+stonewall=1
+gtod_reduce=1
+direct=1
+
+# sync in buffered mode essentially does batching implicitly since the
+# kernel is writing a bunch of pages that are later flushed when
+# there's no more space. We can see this with iostat that the queue
+# size is about 50-ish
+[sync_buffered]
+ioengine=sync
+buffered=1
+
+# see how much performance degrades when using uring async backend in
+# buffered setup and iodepth is restricted to 1.
+[uring]
+ioengine=io_uring
+buffered=1
+iodepth=1
+
+# Now test sync in direct mode. We should see a slowdown because each
+# write is now by-passing cache. We can see that the queue size is
+# always throttled at 1. Though it's not clear if the writes are
+# committed by the drive since we still see relatively good
+# performance.
+[sync]
+ioengine=sync
+
+# See how much performance degrades when using uring async backend in
+# direct mode and iodepth is restricted to 1.
+[uring]
+ioengine=io_uring
+iodepth=1
+
+# It really only makes sense to use async IO with O_direct so that we
+# can extract out the implict buffering into user space. We should see
+# that queue depth now increases back to something reasonable.
+
+# At this point, we should see that we are bound by disk IO and
+# saturating the queue further makes no difference
+
+[uring]
+ioengine=io_uring
+iodepth=64
+
+# With larger block sizes we can saturate the queue size even more
+[uring_bigblksz]
+ioengine=io_uring
+iodepth=64
+bs=1m
+
+# Let's see if we can get a bigger queue if we use a greater queue
+# depth
+[uring_bigblksz]
+ioengine=io_uring
+iodepth=128
+bs=4096
+
+# To show that uring is more performant
+[posix_aio]
+ioengine=posixaio
+iodepth=64

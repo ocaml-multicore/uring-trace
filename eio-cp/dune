@@ -1,0 +1,11 @@
+(executable
+ (name fs_gen)
+ (libraries eio_main eio cmdliner)
+ (modules fs_gen))
+
+(executable
+ (name cp)
+ (libraries eio_main eio)
+ (modules cp))
+
+(dirs :standard \ testfs testfs.copy)
