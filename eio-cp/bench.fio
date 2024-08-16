@@ -1,0 +1,69 @@
+[global]
+bs=4096
+directory=tmp
+filename=bigfile
+filesize=2G
+invalidate=1
+end_fsync=1
+stonewall=1
+gtod_reduce=1
+
+########Sequential#########
+# Even though the block size is set at 4096, buffering mechanism in
+# the kernel batches the requests to reach the maximum IO request size
+# 128k found by `cat /sys/block/nvme0n1/queue/max_sectors_kb`
+
+[seq_read]
+ioengine=sync
+buffered=1
+rw=read
+
+[seq_write]
+ioengine=sync
+buffered=1
+rw=write
+
+[seq_mixed]
+ioengine=sync
+buffered=1
+rw=rw
+
+#########RANDOM############
+# To force the queue depth of 1, we need to set up the files with
+# O_DIRECT to stop the caching effects. Additionally, the reads will
+# no longer use the readahead optimization by the kernel, explaining
+# the slowness versus writes.
+
+[1qd_rand_4k_read]
+ioengine=sync
+direct=1
+rw=randread
+
+[1qd_rand_4k_write]
+ioengine=sync
+direct=1
+rw=randwrite
+
+[1qd_rand_4k_mixed]
+ioengine=sync
+direct=1
+rw=randrw
+
+####RANDOM DEEP QUEUE######
+[64qd_rand_4k_mixed]
+ioengine=io_uring
+iodepth=64
+direct=1
+rw=randread
+
+[64qd_rand_4k_mixed]
+ioengine=io_uring
+iodepth=64
+direct=1
+rw=randwrite
+
+[64qd_rand_4k_mixed]
+ioengine=io_uring
+iodepth=64
+direct=1
+rw=randrw

@@ -1,29 +1,16 @@
-# Checking the effect of writes with/wo O_DIRECT and with async
-
-# When time-based workload is used with buffered IO, performance is
-# inconsistent. Perhaps because of caching effects as the run goes on.
-
-# This nvme queue depth is 255
-# cat /sys/block/nvme0n1/queue/nr_requests
-
 [global]
-rw=write
+rw=read
 bs=4096
 directory=tmp
 filename=bigfile
-# ramp_time=2s
-# time_based=1
-# runtime=10s
 invalidate=1
 end_fsync=1
 stonewall=1
 gtod_reduce=1
 direct=1
 
-# sync in buffered mode essentially does batching implicitly since the
-# kernel is writing a bunch of pages that are later flushed when
-# there's no more space. We can see this with iostat that the queue
-# size is about 50-ish
+# sync in buffered mode does readahead optimization (128k), so the
+# speeds do not reflect the disk read performance
 [sync_buffered]
 ioengine=sync
 buffered=1
@@ -49,12 +36,8 @@ ioengine=sync
 ioengine=io_uring
 iodepth=1
 
-# It really only makes sense to use async IO with O_direct so that we
-# can extract out the implict buffering into user space. We should see
-# that queue depth now increases back to something reasonable.
-
-# At this point, we should see that we are bound by disk IO and
-# saturating the queue further makes no difference
+# To replicate readahead optimization, we increase the iodepth to
+# increase queue size
 [uring]
 ioengine=io_uring
 iodepth=64
@@ -70,6 +53,3 @@ bs=128k
 [posix_aio]
 ioengine=posixaio
 iodepth=64
-
-# Additional notes: with `iostat -ydhx --compact 1` you can see that
-# the average write request queue size maxiumum is 128k
