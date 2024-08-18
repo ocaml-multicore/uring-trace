@@ -3,9 +3,9 @@
  (libraries eio_main eio cmdliner)
  (modules fs_gen))
 
-(executable
- (name cp)
+(executables
+ (names cp_r cp)
  (libraries eio_main eio)
- (modules cp))
+ (modules cp_r cp))
 
 (dirs :standard \ testfs testfs.copy)

@@ -1,28 +1,66 @@
 # TLDR
-- Increasing the default block/buffer sizes in eio/uring provides a
-  generic improvement for file IO. It reduces syscall usage when
-  read/writing large files and additionally reduces how often we get
-  into the slow io-uring path (write requests on regular files are
-  always punted to async worker... only XFS supports inline
-  completion).
-
-- Programs using eio benefit from structured, direct-style concurrency
-  interface with implicit batching of asynchronous IO requests (under
-  io-uring backend). For workloads that are expensive from a syscall
-  perspective, using eio can transparently perform better without
-  requiring users to think about batching.
+- The existence of the linux kernel page cache makes sequential
+  storage IO already the most performant in terms of
+  throughput. However, the structure of some complex programs can
+  introduce high overheads from many small reads/writes to
+  storage. Carefully applied async IO can improve performance here but
+  is quite involved. Writing programs using eio can provide the best
+  of both worlds by having two easy rules of thumb. If your program
+  does a few but large IO requests, increase the default block size
+  config. If your program has many small IO requests to disk, abuse
+  concurrency and have the underlying scheduler handle your request
+  batching for you. The two are not mutually exclusive and if
+  possible, increase both of them. Or you can rely on the high-level
+  flow API's to handle the concurrency for you.
 
 # Introduction
 The performance of disk IO under Linux is typically quite reasonable
-because of kernel support for buffering requests. However, the
-structure of some programs inherently introduce significant overhead
-because of frequent context switching from high syscall
-usage. IO-uring async interface tries to solve this by providing a way
-to batch submissions of requests to the kernel. However,
-structuring/restructuring programs to do explicit batching is
-cumbersome and complex. eio make batching implicit with it's
-underlying scheduler. Users can write high-level concurrent code and
+because of kernel support for buffering requests. Adding asynchronous
+IO naively can cause regressions in performance because it often ends
+up duplicating the work already done by the page cache. As such
+sequential IO is for disk is typically the most performant.
+
+There are some scenarios where async IO can end up being better than
+sequential IO. For example, the structure of some programs inherently
+introduce significant overhead because of frequent context switching
+from high syscall usage. IO-uring async interface tries to solve this
+by providing a way to batch submissions of requests to the
+kernel. However, structuring/restructuring programs to do explicit
+batching is cumbersome and complex.
+
+eio makes batching implicit and easy to express with the underlying
+scheduler. Users can write high-level concurrent code and
 transparently get syscall batching for free.
+
+# Findings
+- Asynchronous execution on storage IO is not generally a good target
+  since these files are always "ready" to be consumed and work can
+  always be done without waiting. Punting these request to an
+  asynchronous context would just hurt overall throughput.
+
+> In some sense, kernel buffering upgrades IO on disk files to just
+> read/writes to main memory which are efficiently batched and
+> dispathed to storage device later on
+
+- The times when async execution is useful over the "blocking" semantics is only if you are
+  1) Writing to separate disks
+  2) Using O_DIRECT & keep an internal cache
+  3) Don't have a lot of RAM (Your writes end up being blocked because of flushing the page cache)
+  4) Need write durability
+  5) Need good latency (Cannot be blocked on long read/writes)
+
+- Otherwise, the linux buffering mechanism is a good default to have.
+  To improve this further, we can look into reducing context switching
+  into the kernel. The two mechanisms to do that are to:
+  1) simply "elongate" rw by increasing block sizes. It reduces syscall usage when read/write
+     large files and additionally reduces how often we get into the slow
+	 io-uring path (write requests on regular files are always punted to
+	 async worker... only XFS supports inline completion)
+  2) increase the "depth" of your rw requests so they can be submitted
+     at the same time to
+     uring. [PR](https://github.com/ocaml-multicore/eio/pull/748)
+     makes this a default setting in `Flow.copy`.
+
 
 ## Definitions
 **IOPS**: Number of operations per second (!! Says nothing about the size of these operations)
@@ -37,7 +75,7 @@ saturate the read requests so that they can already make it into the
 page cache before being requested. Writes are also saturated because
 the kernel buffers them to be flushed at a later time.
 
-**Sscall batching**: Using io-uring to batch syscall requests to the
+**Syscall batching**: Using io-uring to batch syscall requests to the
 kernel, requiring only 1 context switch
 
 > Disk performance expectations is highly variable depending on
@@ -84,6 +122,9 @@ start experiencing pressure from context switching since it's doing
 much more syscalls during traversal. Batched requests under IO-uring
 can help minimize this cost with batch submission of syscalls.
 
+In general, to handle both of these cases well, we can use the two
+mechanisms mentioned above to improve performance.
+
 # Other Notes
 ## Lifting IO batching into userspace.
 High performance storage IO solutions typically suggest using async IO
@@ -91,7 +132,3 @@ with O\_DIRECT flag on files to skip the kernel page cache and write
 their own internal caching mechanism instead. Essentially this _lifts_
 the IO batching responsibility into user space. This is a rather
 involved design but eio could potentially support this.
-
-## TODO
-- write a naive read/write copy strategy, see how that fares.
-`perf` the traversal with cp and eio_cp
