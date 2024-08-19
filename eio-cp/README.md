@@ -240,7 +240,7 @@ let () =
 ```
 ![cp strat](assets/cp_strat.png)
 
-Varying block sizes (Uncached) on workload with 1Mb files
+Varying block sizes (Cached) on workload with 1Mb files
 ![var_blksz](assets/var_blksz.png)
 
 Using eio with uring batching in mind [implementation](https://github.com/ocaml-multicore/eio/blob/main/lib_eio_linux/tests/eurcp_lib.ml)
