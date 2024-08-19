@@ -86,19 +86,41 @@ kernel, requiring only 1 context switch
 # Disk Benchmarks
 
 ## User benchmarks (2171 samples) for my SSD  INTEL (SSDPEKKF512G7L)
-1QD Seq Read: 782Mb/s
-1QD Seq Write: 519Mb/s
-1QD Seq Mixed: 585Mb/s
+- 1QD Seq Read: 782Mb/s
+- 1QD Seq Write: 519Mb/s
+- 1QD Seq Mixed: 585Mb/s
 
-1QD Random 4k Read: 29.1Mb/s
-1QD Random 4k Write: 107Mb/s
-1QD Random 4k Mixed: 42.8Mb/s
+- 1QD Random 4k Read: 29.1Mb/s
+- 1QD Random 4k Write: 107Mb/s
+- 1QD Random 4k Mixed: 42.8Mb/s
 
-64QD Random 4k Read: 479Mb/s
-64QD Random 4k Write: 463Mb/s
-64QD Random 4k Mixed: 425Mb/s
+- 64QD Random 4k Read: 479Mb/s
+- 64QD Random 4k Write: 463Mb/s
+- 64QD Random 4k Mixed: 425Mb/s
 
-[My results](bench.results)
+```
+   READ: bw=978MiB/s (1026MB/s), 978MiB/s-978MiB/s (1026MB/s-1026MB/s), io=2048MiB (2147MB), run=2093-2093msec
+
+  WRITE: bw=483MiB/s (507MB/s), 483MiB/s-483MiB/s (507MB/s-507MB/s), io=2048MiB (2147MB), run=4237-4237msec
+
+   READ: bw=285MiB/s (299MB/s), 285MiB/s-285MiB/s (299MB/s-299MB/s), io=1024MiB (1074MB), run=3589-3589msec
+  WRITE: bw=285MiB/s (299MB/s), 285MiB/s-285MiB/s (299MB/s-299MB/s), io=1024MiB (1073MB), run=3589-3589msec
+
+   READ: bw=26.6MiB/s (27.9MB/s), 26.6MiB/s-26.6MiB/s (27.9MB/s-27.9MB/s), io=2048MiB (2147MB), run=76989-76989msec
+
+  WRITE: bw=90.9MiB/s (95.3MB/s), 90.9MiB/s-90.9MiB/s (95.3MB/s-95.3MB/s), io=2048MiB (2147MB), run=22542-22542msec
+
+   READ: bw=19.3MiB/s (20.2MB/s), 19.3MiB/s-19.3MiB/s (20.2MB/s-20.2MB/s), io=1025MiB (1075MB), run=53225-53225msec
+  WRITE: bw=19.2MiB/s (20.2MB/s), 19.2MiB/s-19.2MiB/s (20.2MB/s-20.2MB/s), io=1023MiB (1073MB), run=53225-53225msec
+
+   READ: bw=504MiB/s (528MB/s), 504MiB/s-504MiB/s (528MB/s-528MB/s), io=2048MiB (2147MB), run=4067-4067msec
+
+  WRITE: bw=525MiB/s (550MB/s), 525MiB/s-525MiB/s (550MB/s-550MB/s), io=2048MiB (2147MB), run=3903-3903msec
+
+   READ: bw=219MiB/s (229MB/s), 219MiB/s-219MiB/s (229MB/s-229MB/s), io=1022MiB (1072MB), run=4674-4674msec
+  WRITE: bw=219MiB/s (230MB/s), 219MiB/s-219MiB/s (230MB/s-230MB/s), io=1026MiB (1076MB), run=4674-4674msec
+```
+[My_full results](bench.results)
 
 ## Evaluation
 Best performance of raw IO against SSD hinges being able to saturate
@@ -108,7 +130,7 @@ form a queue of pending requests. Sequential IO hits this case since
 it is just streaming a while block of IO requests to disk. The 1QD
 Random 4k read doesn't happen because of IO buffering by the kernel.
 
-Copying one or a few **small/big** file(s): The most efficient way is
+Copying one or a **few small/big** file(s): The most efficient way is
 to just perform a sequential read and write with the maximum block
 size. Even better, on Linux, we use copy\_file\_range API which
 performs an in-kernel copy of the entire file with a single
@@ -218,7 +240,7 @@ let () =
 ```
 ![cp strat](assets/cp_strat.png)
 
-Varying block sizes (Uncached)
+Varying block sizes (Uncached) on workload with 1Mb files
 ![var_blksz](assets/var_blksz.png)
 
 Using eio with uring batching in mind [implementation](https://github.com/ocaml-multicore/eio/blob/main/lib_eio_linux/tests/eurcp_lib.ml)
