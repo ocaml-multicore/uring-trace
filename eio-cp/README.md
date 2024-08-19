@@ -126,11 +126,32 @@ In general, to handle both of these cases well, we can use the two
 mechanisms mentioned above to improve performance.
 
 ## Appendix
-Comparing underlying linux syscalls 1) read/write 2) splice 3)
-sendfile 4) copy\_file\_range ![syscall
-strat](assets/syscall_strat.png)
+Comparing underlying linux syscalls (Sadiq's machine results)
+1) read/write
+2) splice
+3) sendfile
+4) copy\_file\_range
+![syscallstrat](assets/syscall_strat.png)
 
-Comparing filesystem `cp -r` vs `eio\_cp -r`
+Comparing filesystem `cp -r` vs `eio_cp -r`
+
+Workload for 4kb files:
+```
+Directory depth: 5
+Files per directory: 7
+Filesize: 4k
+Num files: 97655
+Total size of IO = 480MB (R) + 480 (W) = 960MB
+```
+Workload for 1Mb files:
+```
+Directory depth: 5
+Files per directory: 4
+Filesize: 1MB Num files: ... Total IO size = 780MB (R) + 780MB (W)
+Num files: 780
+Total IO size = 780MB (R) + 780MB (W) = 1560MB
+```
+
 ```ocaml
 open Eio
 
@@ -197,7 +218,7 @@ let () =
 ```
 ![cp strat](assets/cp_strat.png)
 
-Varying block sizes
+Varying block sizes (Uncached)
 ![var_blksz](assets/var_blksz.png)
 
 Using eio with uring batching in mind [implementation](https://github.com/ocaml-multicore/eio/blob/main/lib_eio_linux/tests/eurcp_lib.ml)
