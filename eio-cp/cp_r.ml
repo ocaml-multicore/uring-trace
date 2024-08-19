@@ -45,14 +45,12 @@ let copy_bfs src dst =
             (* Append files in found directory *)
             List.iter (fun f -> Q.push q (src_path / f, dst_path / f)) files
         | `Regular_file ->
-          Semaphore.acquire sem;
+            Semaphore.acquire sem;
             Fiber.fork ~sw (fun () ->
                 Path.with_open_in src_path @@ fun source ->
                 Path.with_open_out ~create:(`Exclusive stat.perm) dst_path
-                @@ fun sink ->
-                Flow.copy source sink;
-            );
-          Semaphore.release sem
+                @@ fun sink -> Flow.copy source sink);
+            Semaphore.release sem
         | _ -> failwith "Not sure how to handle kind")
   done
 
