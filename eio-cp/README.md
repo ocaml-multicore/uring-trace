@@ -125,6 +125,132 @@ can help minimize this cost with batch submission of syscalls.
 In general, to handle both of these cases well, we can use the two
 mechanisms mentioned above to improve performance.
 
+## Appendix
+Comparing underlying linux syscalls 1) read/write 2) splice 3)
+sendfile 4) copy\_file\_range ![syscall
+strat](assets/syscall_strat.png)
+
+Comparing filesystem `cp -r` vs `eio\_cp -r`
+```ocaml
+open Eio
+
+let ( / ) = Eio.Path.( / )
+
+let copy_dfs concurrent src dst =
+  let rec aux ~src ~dst =
+    let stat = Path.stat ~follow:false src in
+    match stat.kind with
+    | `Directory ->
+        Path.mkdir ~perm:stat.perm dst;
+        let files = Path.read_dir src in
+        let iter =
+          if concurrent then Fiber.List.iter ~max_fibers:2 else List.iter
+        in
+        iter
+          (fun basename -> aux ~src:(src / basename) ~dst:(dst / basename))
+          files
+    | `Regular_file ->
+        Path.with_open_in src @@ fun source ->
+        Path.with_open_out ~create:(`Exclusive stat.perm) dst @@ fun sink ->
+        Flow.copy source sink
+    | _ -> failwith "Not sure how to handle kind"
+  in
+  aux ~src ~dst
+
+module Q = Eio_utils.Lf_queue
+
+let copy_bfs src dst =
+  let sem = Semaphore.make 64 in
+  let q = Q.create () in
+  Q.push q (src, dst);
+
+  Switch.run @@ fun sw ->
+  while not (Q.is_empty q) do
+    match Q.pop q with
+    | None -> failwith "None in queue"
+    | Some (src_path, dst_path) -> (
+        let stat = Path.stat ~follow:false src_path in
+        match stat.kind with
+        | `Directory ->
+            Path.mkdir ~perm:stat.perm dst_path;
+            let files = Path.read_dir src_path in
+            (* Append files in found directory *)
+            List.iter (fun f -> Q.push q (src_path / f, dst_path / f)) files
+        | `Regular_file ->
+            Semaphore.acquire sem;
+            Fiber.fork ~sw (fun () ->
+                Path.with_open_in src_path @@ fun source ->
+                Path.with_open_out ~create:(`Exclusive stat.perm) dst_path
+                @@ fun sink -> Flow.copy source sink);
+            Semaphore.release sem
+        | _ -> failwith "Not sure how to handle kind")
+  done
+
+let () =
+  let block_size = try Some (int_of_string Sys.argv.(3)) with _ -> None in
+  let concurrent = try bool_of_string Sys.argv.(4) with _ -> true in
+  Eio_linux.run ?block_size (fun env ->
+      let cwd = Eio.Stdenv.fs env in
+      let src = cwd / Sys.argv.(1) in
+      let dst = cwd / Sys.argv.(2) in
+      copy_bfs src dst)
+```
+![cp strat](assets/cp_strat.png)
+
+Varying block sizes
+![var_blksz](assets/var_blksz.png)
+
+Using eio with uring batching in mind [implementation](https://github.com/ocaml-multicore/eio/blob/main/lib_eio_linux/tests/eurcp_lib.ml)
+![trace_old](assets/trace_old.svg)
+![trace_new](assets/trace_new.svg)
+```
+#OLD
++default_fs: 288.79 MB/s
+{
+  "config": {
+    "uname": "Linux debian-thinkpad 6.1.0-23-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.99-1 (2024-07-15) x86_64 GNU/Linux",
+    "backend": "linux",
+    "recommended_domain_count": 4
+  },
+  "results": [
+    {
+      "name": "Flow.copy",
+      "metrics": [
+        {
+          "name": "default_fs",
+          "value": 302819851.7110036,
+          "units": "bytes/s",
+          "description": "default_fs Flow.copy"
+        }
+      ]
+    }
+  ]
+}
+
+#NEW
++default_fs: 462.35 MB/s
+{
+  "config": {
+    "uname": "Linux debian-thinkpad 6.1.0-23-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.99-1 (2024-07-15) x86_64 GNU/Linux",
+    "backend": "linux",
+    "recommended_domain_count": 4
+  },
+  "results": [
+    {
+      "name": "Flow.copy",
+      "metrics": [
+        {
+          "name": "default_fs",
+          "value": 484808364.3907238,
+          "units": "bytes/s",
+          "description": "default_fs Flow.copy"
+        }
+      ]
+    }
+  ]
+}
+```
+
 # Other Notes
 ## Lifting IO batching into userspace.
 High performance storage IO solutions typically suggest using async IO
